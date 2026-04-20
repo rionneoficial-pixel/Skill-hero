@@ -16,6 +16,7 @@ const playerLifeFill = document.getElementById("player-life-fill");
 const playerLifeText = document.getElementById("player-life-text");
 const battleLog = document.getElementById("battle-log");
 const attackButton = document.getElementById("attack-button");
+const defendButton = document.getElementById("defend-button");
 const restartButton = document.getElementById("restart-button");
 const characterOverlay = document.getElementById("character-overlay");
 const powerOverlay = document.getElementById("power-overlay");
@@ -24,6 +25,9 @@ const messageStep = document.getElementById("message-step");
 const messageTitle = document.getElementById("message-title");
 const messageBody = document.getElementById("message-body");
 const messageButton = document.getElementById("message-button");
+const mobileAttackButton = document.getElementById("mobile-attack-button");
+const mobileDefendButton = document.getElementById("mobile-defend-button");
+const mobileMoveButtons = document.querySelectorAll("[data-move]");
 
 const tileSize = 48;
 const cols = canvas.width / tileSize;
@@ -138,6 +142,7 @@ const state = {
   started: false,
   gameOver: false,
   win: false,
+  isDefending: false,
   effects: [],
   messageAction: null,
   audioContext: null,
@@ -275,6 +280,10 @@ function playHitSound() {
   playTone(180, 0.09, "square", 0.035, 90);
 }
 
+function playDefendSound() {
+  playTone(620, 0.12, "triangle", 0.035, 420);
+}
+
 function playBiomeSound(biome) {
   if (state.lastBiomeSound === biome) {
     return;
@@ -345,6 +354,11 @@ function updatePlayerCard() {
 
 function updateActionState() {
   attackButton.disabled = !state.started || state.gameOver || !getAttackableMonster();
+  defendButton.disabled = !state.started || state.gameOver;
+  defendButton.classList.toggle("active", state.isDefending);
+  mobileAttackButton.disabled = attackButton.disabled;
+  mobileDefendButton.disabled = defendButton.disabled;
+  mobileDefendButton.classList.toggle("active", state.isDefending);
 }
 
 function createEffect(type, x, y, color) {
@@ -399,6 +413,7 @@ function resetGame() {
   state.started = false;
   state.gameOver = false;
   state.win = false;
+  state.isDefending = false;
   state.monsters = cloneMonsters();
   state.player.x = 0;
   state.player.y = 5;
@@ -488,6 +503,8 @@ function attackMonster() {
     return;
   }
 
+  state.isDefending = false;
+
   const target = getAttackableMonster();
   if (!target) {
     addLog("Aproxime-se de um monstro e aponte para ele antes de atacar.");
@@ -530,6 +547,19 @@ function attackMonster() {
   maybeMonsterTurn(true);
 }
 
+function defendHero() {
+  if (!state.started || state.gameOver) {
+    return;
+  }
+
+  state.isDefending = true;
+  createEffect("impact", state.player.x, state.player.y, "#8ecae6");
+  addLog(`${state.selectedCharacter.name} entrou em postura de defesa.`, true);
+  playDefendSound();
+  updateActionState();
+  maybeMonsterTurn(true);
+}
+
 function maybeMonsterTurn(afterAttack) {
   if (state.gameOver || state.win) {
     return;
@@ -552,16 +582,23 @@ function maybeMonsterTurn(afterAttack) {
 
   let totalDamage = 0;
   adjacentMonsters.forEach((monster) => {
-    const damage = randomBetween(monster.attackMin, monster.attackMax);
+    const baseDamage = randomBetween(monster.attackMin, monster.attackMax);
+    const damage = state.isDefending ? Math.max(1, Math.floor(baseDamage * 0.4)) : baseDamage;
     totalDamage += damage;
-    addLog(`${monster.name} contra-atacou e tirou ${damage} de vida.`);
+    if (state.isDefending) {
+      addLog(`${monster.name} atacou, mas a defesa segurou o golpe em ${damage} de dano.`);
+    } else {
+      addLog(`${monster.name} contra-atacou e tirou ${damage} de vida.`);
+    }
     createEffect("impact", state.player.x, state.player.y, "#ffffff");
   });
 
   state.life -= totalDamage;
+  state.isDefending = false;
   playHitSound();
   updateSummary();
   updatePlayerCard();
+  updateActionState();
 
   if (state.life <= 0) {
     handleLose();
@@ -802,6 +839,14 @@ function drawPlayer(time) {
   ctx.arc(centerX, centerY - 2 + bounce, 14, 0, Math.PI * 2);
   ctx.fill();
 
+  if (state.isDefending) {
+    ctx.strokeStyle = "#8ecae6";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(centerX, centerY + bounce, 20, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
   ctx.fillStyle = "#231942";
   ctx.beginPath();
   ctx.arc(centerX, centerY - 6 + bounce, 3, 0, Math.PI * 2);
@@ -879,13 +924,19 @@ function render(time) {
 
 function handleKeyDown(event) {
   const key = event.key.toLowerCase();
-  if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", " "].includes(key)) {
+  if (["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", " ", "shift"].includes(key)) {
     event.preventDefault();
   }
 
   if (key === " ") {
     ensureAudio();
     attackMonster();
+    return;
+  }
+
+  if (key === "shift") {
+    ensureAudio();
+    defendHero();
     return;
   }
 
@@ -930,6 +981,36 @@ messageButton.addEventListener("click", () => {
 attackButton.addEventListener("click", () => {
   ensureAudio();
   attackMonster();
+});
+
+defendButton.addEventListener("click", () => {
+  ensureAudio();
+  defendHero();
+});
+
+mobileAttackButton.addEventListener("click", () => {
+  ensureAudio();
+  attackMonster();
+});
+
+mobileDefendButton.addEventListener("click", () => {
+  ensureAudio();
+  defendHero();
+});
+
+const mobileDirections = {
+  up: [0, -1],
+  down: [0, 1],
+  left: [-1, 0],
+  right: [1, 0]
+};
+
+mobileMoveButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    ensureAudio();
+    const [dx, dy] = mobileDirections[button.dataset.move];
+    movePlayer(dx, dy, performance.now());
+  });
 });
 
 restartButton.addEventListener("click", resetGame);

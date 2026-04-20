@@ -47,9 +47,9 @@
 
       <section class="guide-card">
         <h2>Controles</h2>
-        <p>`WASD` ou setas para caminhar pelo mapa.</p>
-        <p>`Espaco` para atacar o monstro ao lado.</p>
-        <p>Use o botao de ataque se preferir clicar.</p>
+        <p>WASD ou setas para caminhar pelo mapa.</p>
+        <p>Espaco para atacar e Shift para defender no teclado.</p>
+        <p>No celular, use o direcional e os botoes de ataque e defesa.</p>
       </section>
 
       <section class="guide-card" id="biome-card">
@@ -140,6 +140,7 @@
           <p class="step">Acoes</p>
           <div class="controls">
             <button class="action-button" id="attack-button" type="button">Atacar</button>
+            <button class="defend-button" id="defend-button" type="button">Defender</button>
             <button class="secondary-button" id="restart-button" type="button">Recomecar</button>
           </div>
         </article>
@@ -148,6 +149,20 @@
           <p class="step">Diario de aventura</p>
           <div class="battle-log" id="battle-log" aria-live="polite"></div>
         </article>
+      </section>
+
+      <section class="mobile-controls" aria-label="Controles para celular">
+        <div class="mobile-pad">
+          <button class="mobile-move up" type="button" data-move="up">▲</button>
+          <button class="mobile-move left" type="button" data-move="left">◀</button>
+          <button class="mobile-move right" type="button" data-move="right">▶</button>
+          <button class="mobile-move down" type="button" data-move="down">▼</button>
+        </div>
+
+        <div class="mobile-actions">
+          <button class="action-button mobile-action" id="mobile-attack-button" type="button">Atacar</button>
+          <button class="defend-button mobile-action" id="mobile-defend-button" type="button">Defender</button>
+        </div>
       </section>
     </section>
   </main>
